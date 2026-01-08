@@ -1,0 +1,7 @@
+{
+  "name": "Copy of EchoScribe AI",
+  "description": "A professional-grade audio transcription tool powered by Gemini 3.5, featuring speaker identification and high-fidelity text extraction.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
