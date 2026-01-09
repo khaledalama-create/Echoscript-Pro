@@ -17,46 +17,49 @@ const PROMPTS: Record<ExtractionMode, string> = {
 You are a Senior Sales Operations Analyst and Deal Strategist. Your goal is to analyze the provided sales call transcript to equip the Account Executive (AE) with the critical information needed to close the deal.
 
 # Task
-Analyze the transcript using the BANT qualification framework. Use the EXACT following status labels. For each section, provide strategic context and a direct quote.
+Analyze the transcript using the BANT framework. Provide strategic context and quotes.
 
 # Output Format
-
 ## 1. BANT Qualification Analysis
-
 ### [BUDGET]
-- Status: (Budget Confirmed | Budget Pending | Budget Unclear | No Budget)
-- Analysis: [Detailed breakdown]
-- Quote: "[Direct evidence from audio]"
-
+- Status: (Confirmed/Pending/Unclear)
+- Analysis: [Text]
+- Quote: "[Text]"
 ### [AUTHORITY]
-- Status: (Decision Maker | Influencer | Gatekeeper | Unknown)
-- Analysis: [Detailed breakdown]
-- Quote: "[Direct evidence from audio]"
-
+- Status: (DM/Influencer/Gatekeeper)
+- Analysis: [Text]
+- Quote: "[Text]"
 ### [NEED]
-- Status: (Critical Pain | Opportunity | Exploratory | No Fit)
-- Analysis: [Detailed breakdown]
-- Quote: "[Direct evidence from audio]"
-
+- Status: (Critical/Opportunity/Exploratory)
+- Analysis: [Text]
+- Quote: "[Text]"
 ### [TIMELINE]
-- Status: (Immediate <1mo | Medium-term 1-3mo | Long-term 3mo+ | Unknown)
-- Analysis: [Detailed breakdown]
-- Quote: "[Direct evidence from audio]"
-
+- Status: (Immediate/Medium/Long)
+- Analysis: [Text]
+- Quote: "[Text]"
 ## 2. Closing Strategy
-- [Actionable advice 1]
-- [Actionable advice 2]
-- [Actionable advice 3]
-
+- [Advice]
 ## 3. Lead Summary
-- Targeted Area: [Department/Region/Vertical]
+- Targeted Area: [Text]
 - Company Name: [Name]
-- Contact Name: [Name]`
+- Contact Name: [Name]`,
+
+  followup: `# Role
+You are a "Memorable Follow-up" Specialist. Your job is to find the "Social Glue" in a conversation—those tiny details that make a person remember a specific call.
+
+# Task
+Analyze the transcript for unique personal details, shared laughs, specific local references, or unique phrasing used by the client. Generate follow-up "hooks" categorized by tone.
+
+# Output Format
+## 1. Memorable Hooks
+- [PROFESSIONAL]: A hook focusing on a specific business problem they mentioned in a unique way.
+- [NICE]: A hook focusing on a personal detail (e.g., upcoming vacation, pet, weather, coffee preference).
+- [FUNNY]: A lighthearted reference to a joke made or a "human moment" (e.g., "Sorry for the leaf blower in the background," or a shared laugh about a common struggle).
+
+## 2. The "Recall" Points
+- List 3-4 specific quotes or moments that will instantly remind the client of who you are and what you talked about.`
 };
 
-/**
- * Processes audio with specific AI intelligence based on the mode.
- */
 export async function processAudioIntelligence(
   base64Audio: string, 
   mimeType: string, 
@@ -80,27 +83,17 @@ export async function processAudioIntelligence(
       model: 'gemini-3-flash-preview',
       contents: { parts: [audioPart, textPart] },
       config: {
-        temperature: mode === 'transcript' ? 0.1 : 0.4,
+        temperature: mode === 'transcript' ? 0.1 : 0.7, // Higher temp for creative follow-ups
       }
     });
 
     if (!response.text) {
-      throw new Error("The AI model returned an empty response. Please verify your file quality and try again.");
+      throw new Error("The AI model returned an empty response.");
     }
 
     return response.text;
   } catch (error: any) {
-    console.error("Gemini Intelligence Error:", error);
-    
-    // Provide user-friendly feedback for common API errors
-    const errMsg = error.message || "";
-    if (errMsg.includes("403")) {
-      throw new Error("API Permission Error: Access was denied. Please check your project's API quotas and billing status.");
-    }
-    if (errMsg.includes("429")) {
-      throw new Error("Rate Limit Exceeded: Too many requests. Please wait a moment before trying again.");
-    }
-    
-    throw new Error(error.message || "Failed to process audio intelligence.");
+    console.error("Gemini Error:", error);
+    throw new Error(error.message || "Failed to process audio.");
   }
 }

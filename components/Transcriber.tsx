@@ -46,7 +46,7 @@ const Transcriber: React.FC = () => {
     if (!file) return;
 
     setResult({ text: '', status: 'processing' });
-    setProgressMessage("Scanning deal markers...");
+    setProgressMessage("Deep-scanning conversation...");
 
     try {
       const base64 = await fileToBase64(file);
@@ -56,7 +56,7 @@ const Transcriber: React.FC = () => {
       setResult({ 
         text: '', 
         status: 'error', 
-        error: err.message || "An error occurred during processing." 
+        error: err.message || "An error occurred." 
       });
     } finally {
       setProgressMessage('');
@@ -65,12 +65,11 @@ const Transcriber: React.FC = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(result.text);
-    alert("Copied extraction to clipboard!");
+    alert("Copied intelligence to clipboard!");
   };
 
   return (
     <div className="max-w-6xl mx-auto w-full px-4 py-8 space-y-12">
-      {/* Main Control Panel */}
       <div className="bg-white rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-100 px-10 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -115,11 +114,12 @@ const Transcriber: React.FC = () => {
              </div>
 
              <div className="lg:col-span-7">
-                <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">Strategy Mode</label>
-                <div className="flex flex-col gap-3">
+                <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">Extraction Goal</label>
+                <div className="grid grid-cols-1 gap-3">
                   {[
-                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Analyze Budget, Authority, Need, and Timeline.' },
-                    { id: 'transcript', label: 'Call Transcription', desc: 'Generate a verbatim record with speaker identification.' }
+                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Identify Budget, Authority, Need, and Timeline.' },
+                    { id: 'followup', label: 'Follow-up Magic', desc: 'Find unique personal hooks for a memorable follow-up.' },
+                    { id: 'transcript', label: 'Call Transcription', desc: 'Verbatim record with speaker tagging.' }
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -131,6 +131,7 @@ const Transcriber: React.FC = () => {
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${mode === item.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:text-slate-600'}`}>
                         {item.id === 'bant' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
+                        {item.id === 'followup' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
                         {item.id === 'transcript' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                       </div>
                       <div>
@@ -154,9 +155,8 @@ const Transcriber: React.FC = () => {
                   : 'bg-slate-900 hover:bg-black hover:-translate-y-1 hover:shadow-2xl'}
               `}
             >
-              {result.status === 'processing' ? 'Generating Intelligence...' : 'Analyze Intelligence'}
+              {result.status === 'processing' ? 'Processing...' : 'Generate Intelligence'}
             </button>
-            
             {progressMessage && (
               <div className="mt-8 flex flex-col items-center gap-2">
                 <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden">
@@ -169,17 +169,14 @@ const Transcriber: React.FC = () => {
         </div>
       </div>
 
-      {/* Results Section */}
       {(result.status === 'completed' || result.status === 'processing' || result.status === 'error') && (
         <div className="bg-white rounded-[2.5rem] p-10 md:p-14 border border-slate-100 shadow-xl min-h-[400px]">
           {result.status === 'processing' && (
-             <div className="flex flex-col items-center justify-center py-32 space-y-6">
+             <div className="flex flex-col items-center justify-center py-32 space-y-6 text-center">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Engine Warmup...</p>
-                <p className="text-xs font-bold text-slate-400 italic">Processing your media with deep analysis.</p>
              </div>
           )}
-
           {result.status === 'completed' && (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
               <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-50">
@@ -188,27 +185,22 @@ const Transcriber: React.FC = () => {
                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Intelligence Live</span>
                 </div>
                 <button onClick={copyToClipboard} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">
-                  Copy Results
+                  Copy Brief
                 </button>
               </div>
               <IntelligenceResult text={result.text} mode={mode} />
             </div>
           )}
-
           {result.status === 'error' && (
             <div className="h-[300px] flex flex-col items-center justify-center text-rose-500 text-center px-6">
-              <p className="font-black text-sm uppercase tracking-widest mb-2">Extraction Failed</p>
+              <p className="font-black text-sm uppercase tracking-widest mb-2">Failed</p>
               <p className="text-xs font-bold opacity-60 max-w-sm">{result.error}</p>
             </div>
           )}
         </div>
       )}
-      
       <style>{`
-        @keyframes bar {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(300%); }
-        }
+        @keyframes bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
       `}</style>
     </div>
   );

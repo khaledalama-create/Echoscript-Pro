@@ -1,5 +1,5 @@
 
-export type ExtractionMode = 'transcript' | 'bant';
+export type ExtractionMode = 'transcript' | 'bant' | 'followup';
 
 export interface TranscriptionResult {
   text: string;
