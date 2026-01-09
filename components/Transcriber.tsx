@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { processAudioIntelligence } from '../geminiService';
-import { TranscriptionResult, FileInfo, ExtractionMode } from '../types';
+import { TranscriptionResult, FileInfo, ExtractionMode, ChatMessage } from '../types';
 import IntelligenceResult from './IntelligenceResult';
 
 const Transcriber: React.FC = () => {
@@ -10,6 +10,8 @@ const Transcriber: React.FC = () => {
   const [mode, setMode] = useState<ExtractionMode>('bant');
   const [result, setResult] = useState<TranscriptionResult>({ text: '', status: 'idle' });
   const [progressMessage, setProgressMessage] = useState<string>('');
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +29,7 @@ const Transcriber: React.FC = () => {
         lastModified: selectedFile.lastModified,
       });
       setResult({ text: '', status: 'idle' });
+      setChatHistory([]);
     }
   };
 
@@ -46,20 +49,41 @@ const Transcriber: React.FC = () => {
     if (!file) return;
 
     setResult({ text: '', status: 'processing' });
-    setProgressMessage("Deep-scanning conversation...");
+    setProgressMessage("Indexing conversation...");
 
     try {
       const base64 = await fileToBase64(file);
-      const text = await processAudioIntelligence(base64, file.type, mode);
-      setResult({ text, status: 'completed' });
+      if (mode === 'chat') {
+        // Initial chat load
+        const initialResponse = "Recording processed. I'm ready to answer your questions about the call. What would you like to know?";
+        setChatHistory([{ role: 'model', text: initialResponse }]);
+        setResult({ text: initialResponse, status: 'completed' });
+      } else {
+        const text = await processAudioIntelligence(base64, file.type, mode);
+        setResult({ text, status: 'completed' });
+      }
     } catch (err: any) {
-      setResult({ 
-        text: '', 
-        status: 'error', 
-        error: err.message || "An error occurred." 
-      });
+      setResult({ text: '', status: 'error', error: err.message || "An error occurred." });
     } finally {
       setProgressMessage('');
+    }
+  };
+
+  const handleSendMessage = async (message: string) => {
+    if (!file || !message.trim() || isTyping) return;
+
+    const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', text: message }];
+    setChatHistory(newHistory);
+    setIsTyping(true);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const response = await processAudioIntelligence(base64, file.type, 'chat', newHistory);
+      setChatHistory(prev => [...prev, { role: 'model', text: response }]);
+    } catch (err: any) {
+      setChatHistory(prev => [...prev, { role: 'model', text: "Error: " + (err.message || "Failed to get a response.") }]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -115,11 +139,12 @@ const Transcriber: React.FC = () => {
 
              <div className="lg:col-span-7">
                 <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">Extraction Goal</label>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Identify Budget, Authority, Need, and Timeline.' },
-                    { id: 'followup', label: 'Follow-up Magic', desc: 'Find unique personal hooks for a memorable follow-up.' },
-                    { id: 'transcript', label: 'Call Transcription', desc: 'Verbatim record with speaker tagging.' }
+                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Identify B.A.N.T. metrics.' },
+                    { id: 'followup', label: 'Follow-up Magic', desc: 'Find memorable hooks.' },
+                    { id: 'chat', label: 'Interactive Q&A', desc: 'Ask specific questions.' },
+                    { id: 'transcript', label: 'Transcription', desc: 'Verbatim text record.' }
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -132,11 +157,12 @@ const Transcriber: React.FC = () => {
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${mode === item.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:text-slate-600'}`}>
                         {item.id === 'bant' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
                         {item.id === 'followup' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
+                        {item.id === 'chat' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>}
                         {item.id === 'transcript' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                       </div>
                       <div>
-                        <p className={`text-sm font-black ${mode === item.id ? 'text-blue-900' : 'text-slate-900'}`}>{item.label}</p>
-                        <p className="text-[11px] text-slate-400 font-medium">{item.desc}</p>
+                        <p className={`text-xs font-black ${mode === item.id ? 'text-blue-900' : 'text-slate-900'}`}>{item.label}</p>
+                        <p className="text-[10px] text-slate-400 font-medium leading-tight">{item.desc}</p>
                       </div>
                     </button>
                   ))}
@@ -184,11 +210,19 @@ const Transcriber: React.FC = () => {
                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Intelligence Live</span>
                 </div>
-                <button onClick={copyToClipboard} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">
-                  Copy Brief
-                </button>
+                {mode !== 'chat' && (
+                  <button onClick={copyToClipboard} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">
+                    Copy Brief
+                  </button>
+                )}
               </div>
-              <IntelligenceResult text={result.text} mode={mode} />
+              <IntelligenceResult 
+                text={result.text} 
+                mode={mode} 
+                chatHistory={chatHistory} 
+                onSendMessage={handleSendMessage}
+                isTyping={isTyping}
+              />
             </div>
           )}
           {result.status === 'error' && (

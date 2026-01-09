@@ -1,18 +1,39 @@
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChatMessage } from '../types';
 
 interface Props {
   text: string;
   mode: string;
+  chatHistory?: ChatMessage[];
+  onSendMessage?: (message: string) => void;
+  isTyping?: boolean;
 }
 
-const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
+const IntelligenceResult: React.FC<Props> = ({ text, mode, chatHistory = [], onSendMessage, isTyping = false }) => {
+  const [inputValue, setInputValue] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mode === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatHistory, isTyping, mode]);
+
   const sanitize = (str: string) => {
     return str
       .replace(/\*\*/g, '')
       .replace(/^\s*[\-\*]\s*/, '')
       .replace(/###/g, '')
       .trim();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue.trim() && onSendMessage) {
+      onSendMessage(inputValue);
+      setInputValue('');
+    }
   };
 
   // 1. TRANSCRIPT MODE
@@ -26,7 +47,61 @@ const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
     );
   }
 
-  // 2. FOLLOW-UP MODE
+  // 2. CHAT / Q&A MODE
+  if (mode === 'chat') {
+    return (
+      <div className="flex flex-col h-[500px] md:h-[600px] relative">
+        <div className="flex-grow overflow-y-auto px-2 space-y-6 pb-24 scroll-smooth">
+          {chatHistory.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+              <div className={`
+                max-w-[85%] px-6 py-4 rounded-3xl text-sm font-medium leading-relaxed
+                ${msg.role === 'user' 
+                  ? 'bg-blue-600 text-white rounded-tr-none' 
+                  : 'bg-slate-100 text-slate-800 rounded-tl-none'}
+              `}>
+                {msg.text}
+              </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex justify-start animate-in fade-in duration-300">
+              <div className="bg-slate-100 px-6 py-4 rounded-3xl rounded-tl-none flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Ask anything about the record..."
+              className="flex-grow px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+            />
+            <button
+              type="submit"
+              disabled={!inputValue.trim() || isTyping}
+              className={`
+                px-6 rounded-2xl flex items-center justify-center transition-all
+                ${!inputValue.trim() || isTyping ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-600/20'}
+              `}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. FOLLOW-UP MODE
   if (mode === 'followup') {
     const hooksSection = text.split('## 1. Memorable Hooks')[1]?.split('## 2. The "Recall" Points')[0] || '';
     const recallSection = text.split('## 2. The "Recall" Points')[1] || '';
@@ -79,7 +154,7 @@ const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
     );
   }
 
-  // 3. BANT MODE (Existing Logic)
+  // 4. BANT MODE
   const bantSections = text.split('###').slice(1);
   const strategySection = text.split('## 2. Closing Strategy')[1]?.split('## 3. Lead Summary')[0] || '';
   const leadSection = text.split('## 3. Lead Summary')[1] || '';

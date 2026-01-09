@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { ExtractionMode } from "./types";
+import { ExtractionMode, ChatMessage } from "./types";
 
 const getAIInstance = () => {
   const apiKey = process.env.API_KEY;
@@ -22,27 +22,11 @@ Analyze the transcript using the BANT framework. Provide strategic context and q
 # Output Format
 ## 1. BANT Qualification Analysis
 ### [BUDGET]
-- Status: (Confirmed/Pending/Unclear)
-- Analysis: [Text]
-- Quote: "[Text]"
 ### [AUTHORITY]
-- Status: (DM/Influencer/Gatekeeper)
-- Analysis: [Text]
-- Quote: "[Text]"
 ### [NEED]
-- Status: (Critical/Opportunity/Exploratory)
-- Analysis: [Text]
-- Quote: "[Text]"
 ### [TIMELINE]
-- Status: (Immediate/Medium/Long)
-- Analysis: [Text]
-- Quote: "[Text]"
 ## 2. Closing Strategy
-- [Advice]
-## 3. Lead Summary
-- Targeted Area: [Text]
-- Company Name: [Name]
-- Contact Name: [Name]`,
+## 3. Lead Summary`,
 
   followup: `# Role
 You are a "Memorable Follow-up" Specialist. Your job is to find the "Social Glue" in a conversation—those tiny details that make a person remember a specific call.
@@ -52,18 +36,19 @@ Analyze the transcript for unique personal details, shared laughs, specific loca
 
 # Output Format
 ## 1. Memorable Hooks
-- [PROFESSIONAL]: A hook focusing on a specific business problem they mentioned in a unique way.
-- [NICE]: A hook focusing on a personal detail (e.g., upcoming vacation, pet, weather, coffee preference).
-- [FUNNY]: A lighthearted reference to a joke made or a "human moment" (e.g., "Sorry for the leaf blower in the background," or a shared laugh about a common struggle).
+## 2. The "Recall" Points`,
 
-## 2. The "Recall" Points
-- List 3-4 specific quotes or moments that will instantly remind the client of who you are and what you talked about.`
+  chat: `You are an Interactive Intelligence Assistant. I have provided an audio/video recording of a conversation. 
+  Your goal is to answer any questions the user has about this recording. 
+  Be precise, quote directly when helpful, and maintain a helpful, professional tone. 
+  If a question cannot be answered from the recording, state that clearly.`
 };
 
 export async function processAudioIntelligence(
   base64Audio: string, 
   mimeType: string, 
-  mode: ExtractionMode
+  mode: ExtractionMode,
+  history: ChatMessage[] = []
 ): Promise<string> {
   const ai = getAIInstance();
   
@@ -74,26 +59,43 @@ export async function processAudioIntelligence(
     },
   };
 
-  const textPart = {
-    text: PROMPTS[mode]
-  };
+  // For initial chat setup or other modes
+  if (mode !== 'chat' || history.length === 0) {
+    const textPart = { text: PROMPTS[mode] };
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: { parts: [audioPart, textPart] },
+      config: { temperature: mode === 'transcript' ? 0.1 : 0.7 }
+    });
+    return response.text || "No response generated.";
+  }
+
+  // For ongoing chat conversations
+  const formattedHistory = history.map(msg => ({
+    role: msg.role,
+    parts: [{ text: msg.text }]
+  }));
+
+  // Add the audio as context to the first turn of the conversation
+  // We insert it into the first user message parts if it exists, or create a new turn
+  const contents = [
+    {
+      role: 'user' as const,
+      parts: [audioPart, { text: PROMPTS.chat }]
+    },
+    ...formattedHistory
+  ];
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: { parts: [audioPart, textPart] },
-      config: {
-        temperature: mode === 'transcript' ? 0.1 : 0.7, // Higher temp for creative follow-ups
-      }
+      contents: contents,
+      config: { temperature: 0.5 }
     });
 
-    if (!response.text) {
-      throw new Error("The AI model returned an empty response.");
-    }
-
-    return response.text;
+    return response.text || "I couldn't process that request.";
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    throw new Error(error.message || "Failed to process audio.");
+    throw new Error(error.message || "Failed to process chat.");
   }
 }
