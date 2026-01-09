@@ -3,7 +3,6 @@ import React, { useState, useRef } from 'react';
 import { processAudioIntelligence } from '../geminiService';
 import { TranscriptionResult, FileInfo, ExtractionMode } from '../types';
 import IntelligenceResult from './IntelligenceResult';
-import MiniGame from './MiniGame';
 
 const Transcriber: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -66,7 +65,7 @@ const Transcriber: React.FC = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(result.text);
-    alert("Copied raw extraction to clipboard!");
+    alert("Copied extraction to clipboard!");
   };
 
   return (
@@ -119,9 +118,8 @@ const Transcriber: React.FC = () => {
                 <label className="block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">Strategy Mode</label>
                 <div className="flex flex-col gap-3">
                   {[
-                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Budget, Authority, Need, Timeline.' },
-                    { id: 'contact', label: 'Contact Extractor', desc: 'Full profile and email discovery.' },
-                    { id: 'transcript', label: 'Call Transcription', desc: 'Verbatim record with speaker tags.' }
+                    { id: 'bant', label: 'BANT Sales Analysis', desc: 'Analyze Budget, Authority, Need, and Timeline.' },
+                    { id: 'transcript', label: 'Call Transcription', desc: 'Generate a verbatim record with speaker identification.' }
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -133,7 +131,6 @@ const Transcriber: React.FC = () => {
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${mode === item.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:text-slate-600'}`}>
                         {item.id === 'bant' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
-                        {item.id === 'contact' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
                         {item.id === 'transcript' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                       </div>
                       <div>
@@ -157,7 +154,7 @@ const Transcriber: React.FC = () => {
                   : 'bg-slate-900 hover:bg-black hover:-translate-y-1 hover:shadow-2xl'}
               `}
             >
-              {result.status === 'processing' ? 'Generating Report...' : 'Analyze Intelligence'}
+              {result.status === 'processing' ? 'Generating Intelligence...' : 'Analyze Intelligence'}
             </button>
             
             {progressMessage && (
@@ -179,7 +176,7 @@ const Transcriber: React.FC = () => {
              <div className="flex flex-col items-center justify-center py-32 space-y-6">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Engine Warmup...</p>
-                <p className="text-xs font-bold text-slate-400 italic">Analysis in progress. The Break Room is open below.</p>
+                <p className="text-xs font-bold text-slate-400 italic">Processing your media with deep analysis.</p>
              </div>
           )}
 
@@ -191,7 +188,7 @@ const Transcriber: React.FC = () => {
                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Intelligence Live</span>
                 </div>
                 <button onClick={copyToClipboard} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">
-                  Copy Raw Brief
+                  Copy Results
                 </button>
               </div>
               <IntelligenceResult text={result.text} mode={mode} />
@@ -206,15 +203,6 @@ const Transcriber: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* Executive Break Room - Persistent Footer */}
-      <section className="space-y-6 pt-12">
-        <div className="flex items-center gap-4 px-2">
-           <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Executive Break Room</h3>
-           <div className="h-px bg-slate-200 flex-1"></div>
-        </div>
-        <MiniGame />
-      </section>
       
       <style>{`
         @keyframes bar {

@@ -5,7 +5,7 @@ import { ExtractionMode } from "./types";
 const getAIInstance = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key is missing. Please check your environment variables.");
+    throw new Error("API Key is missing. This application requires a valid API key in the environment variables to function.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -48,21 +48,10 @@ Analyze the transcript using the BANT qualification framework. Use the EXACT fol
 - [Actionable advice 2]
 - [Actionable advice 3]
 
-## 3. Contact Intelligence
-- Primary Contact Email: [Extract email]
+## 3. Lead Summary
 - Targeted Area: [Department/Region/Vertical]
 - Company Name: [Name]
-- Contact Name: [Name]`,
-
-  contact: `You are a Contact Intelligence Agent. Extract all personal and corporate identification information from the audio. 
-  Focus on:
-  - Full Names
-  - Professional Email Addresses
-  - Phone Numbers
-  - Company Names
-  - Job Titles
-  
-  Format as a clean, structured directory.`
+- Contact Name: [Name]`
 };
 
 /**
@@ -96,12 +85,22 @@ export async function processAudioIntelligence(
     });
 
     if (!response.text) {
-      throw new Error("The model did not return any text output.");
+      throw new Error("The AI model returned an empty response. Please verify your file quality and try again.");
     }
 
     return response.text;
   } catch (error: any) {
     console.error("Gemini Intelligence Error:", error);
+    
+    // Provide user-friendly feedback for common API errors
+    const errMsg = error.message || "";
+    if (errMsg.includes("403")) {
+      throw new Error("API Permission Error: Access was denied. Please check your project's API quotas and billing status.");
+    }
+    if (errMsg.includes("429")) {
+      throw new Error("Rate Limit Exceeded: Too many requests. Please wait a moment before trying again.");
+    }
+    
     throw new Error(error.message || "Failed to process audio intelligence.");
   }
 }

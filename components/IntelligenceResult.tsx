@@ -28,8 +28,8 @@ const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
 
   // Parse sections
   const sections = text.split('###').slice(1);
-  const strategySection = text.split('## 2. Closing Strategy')[1]?.split('## 3. Contact Intelligence')[0] || '';
-  const contactSection = text.split('## 3. Contact Intelligence')[1] || '';
+  const strategySection = text.split('## 2. Closing Strategy')[1]?.split('## 3. Lead Summary')[0] || '';
+  const leadSection = text.split('## 3. Lead Summary')[1] || '';
 
   const getStatusStyles = (statusText: string) => {
     const s = statusText.toLowerCase();
@@ -111,7 +111,6 @@ const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
                 const rawText = l.replace(/^-/, '').trim();
                 const cleanText = sanitize(rawText);
                 
-                // If the AI included a label like "The Efficiency Angle: Info...", split it
                 const parts = cleanText.split(':');
                 const label = parts.length > 1 ? parts[0] : `Strategy ${i + 1}`;
                 const detail = parts.length > 1 ? parts.slice(1).join(':') : parts[0];
@@ -133,17 +132,17 @@ const IntelligenceResult: React.FC<Props> = ({ text, mode }) => {
         </section>
       )}
 
-      {/* 3. Lead Enrichment Directory */}
-      {contactSection.trim() && (
+      {/* 3. Lead Summary Information */}
+      {leadSection.trim() && (
         <section>
           <div className="flex items-center gap-3 mb-8">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">03. Lead Intelligence</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">03. Lead Context</h3>
             <div className="h-px bg-slate-100 flex-1"></div>
           </div>
           
           <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-              {contactSection.trim().split('\n').filter(l => l.includes(':')).map((l, i) => {
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+              {leadSection.trim().split('\n').filter(l => l.includes(':')).map((l, i) => {
                 const [key, val] = l.split(':');
                 const cleanKey = sanitize(key);
                 const cleanVal = sanitize(val);
